@@ -1,0 +1,471 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using MySql.Data.MySqlClient;
+using System.Data;
+using System.Collections;
+
+namespace CS.DB
+{
+    /// <summary>
+    /// MySql数据库操作类
+    /// </summary>
+    public class MySqlDb
+    {
+
+
+        /// <summary>
+        /// 获取连接字符串 返回如下：
+        /// Server=;port=3306;User ID=;password=;database=;charset=utf8
+        /// </summary>
+        /// <param name="server">服务ip</param>
+        /// <param name="user">用户名</param>
+        /// <param name="password">密码</param>
+        /// <param name="database">数据库名</param>
+        /// <param name="port">端口号</param>
+        /// <param name="charset">字符码</param>
+        /// <returns>返回连接字符串</returns>
+        public static string GetConnString(string server,string user,string password,string database,string port="3306",string charset="utf8")
+        {
+            string sConn = string.Format("Server={0};port={1};User ID={2};password={3};database={4};charset={5};Allow User Variables=True", server, port, user, password, database, charset);
+            return sConn;
+        }
+
+        /// <summary>
+        /// 通过连接字符串 获取连接对象
+        /// </summary>
+        /// <param name="sConn">连接字符串</param>
+        /// <param name="isOpen">是否打开连接</param>
+        /// <returns>返回连接</returns>
+        public static MySqlConnection GetConn(string ConnString, bool isOpen = true)
+        {
+            //try
+            //{
+            MySqlConnection conn = new MySqlConnection(ConnString);
+            if (isOpen == true)
+            {
+                conn.Open();
+            }
+            return conn;
+            //}
+            //catch(Exception ex)
+            //{
+            //    throw ex;              
+
+            //}
+        }
+
+        /// <summary>
+        /// 执行sql语句，并自动关闭
+        /// </summary>
+        /// <param name="connstr"></param>
+        /// <param name="sSql"></param>
+        /// <returns></returns>
+        public static int ExecuteNonQuery(string connstr, string sSql)
+        {
+            bool autoClose = true;
+            MySqlConnection conn = GetConn(connstr);
+            return ExecuteNonQuery(conn, sSql, autoClose);
+        }
+        /// <summary>
+        /// 执行命令，返回修改的条数
+        /// </summary>
+        /// <param name="conn">数据库连接</param>
+        /// <param name="sSql">sql语句</param>
+        /// <returns></returns>
+        public static int ExecuteNonQuery(MySqlConnection conn,string sSql,bool autoClose = true)
+        {
+            try
+            {
+                if (conn == null)
+                {
+                    return -1;
+                }
+                if (conn.State == System.Data.ConnectionState.Closed)
+                {
+                    conn.Open();
+                }
+                using (MySqlCommand comm = new MySqlCommand(sSql, conn))
+                {
+                    comm.CommandTimeout = 300; // 秒，5分钟
+                    int iFlag = comm.ExecuteNonQuery();
+                    return iFlag;
+                }
+             
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+             
+            }
+            finally
+            {
+                if (autoClose == true)
+                {
+                    conn.Close();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 获取数据集，并自动关闭连接
+        /// </summary>
+        /// <param name="connstr"></param>
+        /// <param name="sSql"></param>
+        /// <returns></returns>
+        public static DataSet GetDateSet(string connstr, string sSql)
+        {
+            using (MySqlConnection conn = new MySqlConnection(connstr))
+            {
+                conn.Open();
+                DataSet ds = new DataSet();
+                using (MySqlCommand comm = new MySqlCommand(sSql, conn))
+                {
+                    comm.CommandTimeout = 300; // 秒，5分钟               
+                    MySqlDataAdapter adapter = new MySqlDataAdapter(comm);
+                    adapter.Fill(ds);
+                    conn.Close();
+                    return ds;
+                }
+
+            }
+           
+        }
+
+        public static DataSet GetDateSet(MySqlConnection conn, string sSql, bool autoClose = true)
+        {
+            try
+            {
+                if (conn == null)
+                {
+                    return null;
+                }
+                if (conn.State == System.Data.ConnectionState.Closed)
+                {
+                    conn.Open();
+                }
+                DataSet ds = new DataSet();
+                using (MySqlCommand comm = new MySqlCommand(sSql, conn))
+                {
+                    comm.CommandTimeout = 300; // 秒，5分钟
+                    //MySqlDataAdapter adapter = new MySqlDataAdapter(sSql, conn);
+                    MySqlDataAdapter adapter = new MySqlDataAdapter(comm);
+                    adapter.Fill(ds);
+                    return ds;
+                }
+                
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+
+            }
+            finally
+            {
+                if (autoClose == true)
+                {
+                    conn.Close();
+                }
+            }
+
+        }
+
+        public static bool IsExist(string connstr, string sTableName, string sFilter)
+        {
+            bool autoClose = true;
+            MySqlConnection conn = GetConn(connstr);
+            return IsExist(conn, sTableName, sFilter, autoClose);
+        }
+        public static bool IsExist(MySqlConnection conn,string sTableName,string sFilter,bool autoClose = true)
+        {
+            try
+            {
+                if (conn == null)
+                {
+                    return false;
+                }
+                if (conn.State == System.Data.ConnectionState.Closed)
+                {
+                    conn.Open();
+                }
+                string sSql = string.Format("select 1 from {0} where 1=1 {1}", sTableName, sFilter);
+                
+                MySqlCommand comm = new MySqlCommand(sSql, conn);
+                object o = comm.ExecuteScalar();
+                if (o != null)
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+              
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+              
+            }
+            finally
+            {
+                if (autoClose == true)
+                {
+                    conn.Close();
+                }
+            }   
+        }
+
+
+
+        public static object ExecuteScalar(string connstr, string sSql)
+        {
+            bool autoClose = true;
+            MySqlConnection conn = GetConn(connstr);
+            return ExecuteScalar(conn, sSql, autoClose);
+        }
+        /// <summary>
+        /// 执行快速查询，返回第一条记录
+        /// </summary>
+        /// <param name="conn"></param>
+        /// <param name="sSql"></param>
+        /// <param name="autoClose"></param>
+        /// <returns></returns>
+        public static object ExecuteScalar(MySqlConnection conn, string sSql, bool autoClose = true)
+        {
+            try
+            {
+                if (conn == null)
+                {
+                    return false;
+                }
+                if (conn.State == System.Data.ConnectionState.Closed)
+                {
+                    conn.Open();
+                }
+
+                MySqlCommand comm = new MySqlCommand(sSql, conn);
+                comm.CommandTimeout = 300; // 秒，5分钟
+                object o = comm.ExecuteScalar();
+                return o;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+                
+            }
+            finally
+            {
+                if (autoClose == true)
+                {
+                    conn.Close();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 插入数据
+        ///二进制blob类型的值类型为 byte []
+        /// </summary>
+        /// <param name="connstr"></param>
+        /// <param name="table">表名称</param>
+        /// <param name="ht">字段为key,值为value</param>
+        /// <returns></returns>
+        public static int AddData(string connstr , string table, Hashtable ht)
+        {
+            bool autoClose = true;
+            MySqlConnection conn = GetConn(connstr);
+            return AddData(conn,table,ht,autoClose);
+        }
+
+        /// <summary>
+        /// 插入数据
+        ///二进制blob类型的值类型为 byte []
+        /// </summary>
+        /// <param name="conn"></param>
+        /// <param name="table"></param>
+        /// <param name="ht"></param>
+        /// <param name="autoClose"></param>
+        /// <returns></returns>
+        public static int AddData(MySqlConnection conn, string table, Hashtable ht, bool autoClose = true)
+        {
+            //try
+            //{
+                if (conn == null || string.IsNullOrEmpty(table) || ht == null || ht.Count == 0)
+                {
+                    return -1;
+                }
+                if (conn.State == System.Data.ConnectionState.Closed)
+                {
+                    conn.Open();
+                }
+
+                MySqlParameter[] param = new MySqlParameter[ht.Count];
+                StringBuilder sbField = new StringBuilder(); // 字段
+                StringBuilder sbParam = new StringBuilder(); //参数
+
+                int i = 0;
+                foreach (DictionaryEntry de in ht)
+                {
+                    if (i < ht.Count - 1)
+                    {
+                        sbField.Append(de.Key + ",");
+                        sbParam.Append("?" + de.Key + "," );
+                    }
+                    else
+                    {
+                        sbField.Append(de.Key);
+                        sbParam.Append("?" + de.Key );
+                    }
+                   
+                    param[i++] = new MySqlParameter("?" + de.Key, de.Value);                   
+                }
+              
+                string sSql = string.Format("insert into {0}({1}) values({2})",table,sbField.ToString(),sbParam.ToString());
+
+                using (MySqlCommand comm = new MySqlCommand(sSql, conn))
+                {
+                    comm.Parameters.AddRange(param);
+                    int iFlag = comm.ExecuteNonQuery();
+                    return iFlag;  
+                }
+                            
+
+            //}
+            //catch (Exception ex)
+            //{
+            //    throw ex;
+               
+            //}
+            //finally
+            //{
+                if (autoClose == true)
+                {
+                    conn.Close();
+                }
+            //}  
+        }
+
+
+        public static int UpdateData(MySqlConnection conn, string table,string filter, Hashtable ht, bool autoClose = true)
+        {
+            //try
+            //{
+                if (conn == null || string.IsNullOrEmpty(table) || ht == null || ht.Count == 0)
+                {
+                    return -1;
+                }
+                if (conn.State == System.Data.ConnectionState.Closed)
+                {
+                    conn.Open();
+                }
+
+                MySqlParameter[] param = new MySqlParameter[ht.Count];
+                StringBuilder sbField = new StringBuilder(); // 字段
+                StringBuilder sbParam = new StringBuilder(); //参数
+
+                int i = 0;
+                foreach (DictionaryEntry de in ht)
+                {
+                    if (i < ht.Count - 1)
+                    {
+                       
+                        sbParam.Append( de.Key + "=?" +  de.Key + ",");                       
+                    }
+                    else
+                    {
+                        sbParam.Append( de.Key + "=?" +  de.Key );                       
+                    }
+
+                    param[i++] = new MySqlParameter("?" + de.Key, de.Value);
+                }
+
+                string sSql = string.Format("update {0} set {1} where 1=1 {2};", table, sbParam.ToString(), filter);
+
+                using (MySqlCommand comm = new MySqlCommand(sSql, conn))
+                {
+                    comm.Parameters.AddRange(param);
+                    int iFlag = comm.ExecuteNonQuery();
+                    return iFlag;
+                }
+               
+
+            //}
+            //catch (Exception ex)
+            //{
+            //    throw ex;
+              
+            //}
+            //finally
+            //{
+                if (autoClose == true)
+                {
+                    conn.Close();
+                }
+            //}
+        }
+
+
+      
+        /// <summary>
+        /// 保存数据
+        /// 如果不存在，就添加；存在就更新
+        /// </summary>
+        /// <param name="conn"></param>
+        /// <param name="table"></param>
+        /// <param name="filter"></param>
+        /// <param name="ht"></param>
+        /// <param name="autoClose"></param>
+        /// <returns></returns>
+        public static int SaveData(MySqlConnection conn, string table, string filter ,Hashtable ht, bool autoClose = true)
+        {
+            //try
+            //{
+                if (conn == null || string.IsNullOrEmpty(table) || ht == null || ht.Count == 0)
+                {
+                    return -1;
+                }
+                if (conn.State == System.Data.ConnectionState.Closed)
+                {
+                    conn.Open();
+                }
+
+                bool isExist = IsExist(conn, table, filter, autoClose);
+                int iFlag = 0;
+
+                if (isExist)
+                {
+                    iFlag =  UpdateData(conn, table, filter, ht, autoClose);
+                }
+                else
+                {
+                   iFlag =  AddData(conn, table, ht, autoClose);
+                }
+                               
+               return iFlag;                
+
+            //}
+            //catch (Exception ex)
+            //{
+            //    throw ex;                
+            //}
+            //finally
+            //{
+                if (autoClose == true)
+                {
+                    conn.Close();
+                }
+            //}  
+        }
+
+
+        public static int SaveData(string connstr, string table, string filter, Hashtable ht)
+        {
+            bool autoClose = true;
+            MySqlConnection conn = GetConn(connstr);
+            return SaveData(conn, table,filter, ht, autoClose);
+        }
+
+    }
+}

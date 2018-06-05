@@ -1,0 +1,5 @@
+D:\SVN\09.Code\crawler\dll\CS.dll
+D:\SVN\09.Code\crawler\dll\CS.pdb
+D:\SVN\09.Code\crawler\CS\obj\Debug\CS.dll
+D:\SVN\09.Code\crawler\CS\obj\Debug\CS.pdb
+D:\SVN\09.Code\crawler\CS\obj\Debug\CS.csprojResolveAssemblyReference.cache
